@@ -126,10 +126,26 @@
 
         #preview {
             min-height: 30rem;
-            height: auto;
-            max-height: none;
-            flex: 0 0 auto;
-            overflow: visible;
+            height: 30rem;
+            max-height: 30rem;
+            flex: 0 0 30rem;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
+
+        #preview::-webkit-scrollbar {
+            width: 0.5rem;
+        }
+
+        #preview::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #preview::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
         }
 
         #filenameModal {
@@ -239,11 +255,12 @@
         #preview table {
             width: 100%;
             border-collapse: collapse;
+            border: 1px solid #000000;
             margin-bottom: 1rem;
         }
 
         #preview th, #preview td {
-            border: 1px solid #d1d5db;
+            border: 1px solid #000000 !important;
             padding: 0.75rem;
             text-align: left;
         }

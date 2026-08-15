@@ -755,6 +755,12 @@ function createTableParagraph(table) {
                         })],
                         spacing: { line: 240 }
                     })],
+                    borders: {
+                        top: { color: '000000', space: 0, style: docx.BorderStyle.SINGLE, size: 8 },
+                        bottom: { color: '000000', space: 0, style: docx.BorderStyle.SINGLE, size: 8 },
+                        left: { color: '000000', space: 0, style: docx.BorderStyle.SINGLE, size: 8 },
+                        right: { color: '000000', space: 0, style: docx.BorderStyle.SINGLE, size: 8 }
+                    },
                     shading: isHeaderRow ? {
                         type: docx.ShadingType.CLEAR,
                         color: 'FFFFFF',
@@ -772,12 +778,12 @@ function createTableParagraph(table) {
             type: 'pct'
         },
         borders: {
-            top: { color: '999999', space: 1, value: 'single', size: 6 },
-            bottom: { color: '999999', space: 1, value: 'single', size: 6 },
-            left: { color: '999999', space: 1, value: 'single', size: 6 },
-            right: { color: '999999', space: 1, value: 'single', size: 6 },
-            insideHorizontal: { color: '999999', space: 1, value: 'single', size: 6 },
-            insideVertical: { color: '999999', space: 1, value: 'single', size: 6 }
+            top: { color: '000000', space: 0, style: docx.BorderStyle.SINGLE, size: 8 },
+            bottom: { color: '000000', space: 0, style: docx.BorderStyle.SINGLE, size: 8 },
+            left: { color: '000000', space: 0, style: docx.BorderStyle.SINGLE, size: 8 },
+            right: { color: '000000', space: 0, style: docx.BorderStyle.SINGLE, size: 8 },
+            insideHorizontal: { color: '000000', space: 0, style: docx.BorderStyle.SINGLE, size: 8 },
+            insideVertical: { color: '000000', space: 0, style: docx.BorderStyle.SINGLE, size: 8 }
         }
     });
 }
@@ -918,7 +924,35 @@ function processInlineFormatting(text) {
     }
 }
 
-// Copy the rendered preview to the clipboard as rich text, so pasting keeps formatting instead of raw markdown
+function createClipboardHtml() {
+    const copyRoot = preview.cloneNode(true);
+
+    copyRoot.querySelectorAll('table').forEach((table) => {
+        table.setAttribute('border', '1');
+        table.setAttribute('cellspacing', '0');
+        table.setAttribute('cellpadding', '8');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.style.border = '1px solid #000000';
+        table.style.marginBottom = '16px';
+    });
+
+    copyRoot.querySelectorAll('th, td').forEach((cell) => {
+        cell.setAttribute('border', '1');
+        cell.style.border = '1px solid #000000';
+        cell.style.padding = '8px 12px';
+        cell.style.textAlign = 'left';
+    });
+
+    copyRoot.querySelectorAll('th').forEach((header) => {
+        header.style.backgroundColor = '#eff6ff';
+        header.style.fontWeight = '600';
+    });
+
+    return copyRoot.innerHTML;
+}
+
+// Copy the rendered preview as rich text so Word and Excel receive formatted content
 async function copyFormattedPreview(button) {
     const markdown = markdownInput.value;
 
@@ -927,7 +961,7 @@ async function copyFormattedPreview(button) {
         return;
     }
 
-    const html = preview.innerHTML;
+    const html = createClipboardHtml();
     const plainText = preview.innerText;
 
     try {
