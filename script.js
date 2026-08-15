@@ -150,6 +150,36 @@ async function renderMermaidDiagrams() {
 }
 
 
+function stripHtmlTags(value) {
+    if (!value || typeof value !== 'string') return '';
+
+    let sanitized = value
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&#0*160;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/gi, "'")
+        .replace(/&apos;/gi, "'")
+        .replace(/&#x27;/gi, "'")
+        .replace(/&#x2F;/gi, '/');
+
+    sanitized = sanitized
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, '');
+
+    return sanitized
+        .replace(/\r\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/\s*\n\s*/g, '\n')
+        .replace(/[\t ]+\n/g, '\n')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+
 // Parse markdown tables
 function parseTable(lines, startIndex) {
     const table = {
@@ -187,6 +217,48 @@ function parseTable(lines, startIndex) {
     }
     
     return { table, endIndex: endIndex - 1 };
+}
+
+function parseHtmlTable(lines, startIndex) {
+    const table = { rows: [], isTable: false };
+    if (startIndex >= lines.length) return { table, endIndex: startIndex };
+
+    const startLine = lines[startIndex].trim();
+    if (!/<table\b/i.test(startLine)) {
+        return { table, endIndex: startIndex };
+    }
+
+    const htmlLines = [];
+    let endIndex = startIndex;
+
+    while (endIndex < lines.length) {
+        htmlLines.push(lines[endIndex]);
+        if (/<\/table>/i.test(lines[endIndex])) break;
+        endIndex++;
+    }
+
+    if (!htmlLines.length || !/<\/table>/i.test(htmlLines[htmlLines.length - 1])) {
+        return { table, endIndex: startIndex };
+    }
+
+    const fullHtml = htmlLines.join('\n');
+    const rowMatches = [...fullHtml.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)];
+    if (!rowMatches.length) {
+        return { table, endIndex: startIndex };
+    }
+
+    const rows = rowMatches.map((match) => {
+        const cells = [...match[1].matchAll(/<(?:th|td)[^>]*>([\s\S]*?)<\/(?:th|td)>/gi)].map((cellMatch) => stripHtmlTags(cellMatch[1]));
+        return cells.filter((cell) => cell.length > 0 || cells.length > 0);
+    }).filter((row) => row.length > 0);
+
+    if (!rows.length) {
+        return { table, endIndex: startIndex };
+    }
+
+    table.rows = rows;
+    table.isTable = true;
+    return { table, endIndex };
 }
 
 // Convert Markdown to Word Document
@@ -411,6 +483,15 @@ async function markdownToDocx(markdown) {
                 }
 
                 // Handle tables
+                if (/<table\b/i.test(line) || /<tr\b/i.test(line)) {
+                    const { table, endIndex } = parseHtmlTable(lines, i);
+                    if (table.isTable) {
+                        elements.push(createTableParagraph(table));
+                        i = endIndex + 1;
+                        continue;
+                    }
+                }
+
                 if (line.trim().startsWith('|')) {
                     const { table, endIndex } = parseTable(lines, i);
                     if (table.isTable) {
@@ -560,10 +641,11 @@ function createTableParagraph(table) {
         return new docx.TableRow({
             tableHeader: isHeaderRow,
             children: row.map(cell => {
+                const cleanCell = stripHtmlTags(cell || '');
                 return new docx.TableCell({
                     children: [new docx.Paragraph({
                         children: [new docx.TextRun({
-                            text: cell,
+                            text: cleanCell || '',
                             bold: isHeaderRow,
                             color: isHeaderRow ? 'FFFFFF' : '1F2937'
                         })],
@@ -602,6 +684,8 @@ function processInlineFormatting(text) {
         if (!text || typeof text !== 'string') {
             return [new docx.TextRun('')];
         }
+
+        text = stripHtmlTags(text);
 
         const runs = [];
         let currentText = '';
