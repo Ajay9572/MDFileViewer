@@ -34,6 +34,24 @@
             letter-spacing: -0.02em;
         }
 
+        .brand-lockup {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 0.9rem;
+            color: #ffffff;
+            background: linear-gradient(145deg, #2563eb, #7c3aed);
+            box-shadow: 0 10px 22px rgba(79, 70, 229, 0.24);
+        }
+
         .workspace-grid {
             align-items: stretch;
         }
@@ -84,8 +102,8 @@
         }
 
         .panel-content {
-            flex: 1 0 auto;
-            min-height: 30rem;
+            flex: 1 1 auto;
+            min-height: 0;
             display: flex;
             flex-direction: column;
         }
@@ -96,7 +114,6 @@
             width: 100%;
             min-height: 30rem;
             height: 30rem;
-            max-height: 30rem;
             flex: 0 0 30rem;
             box-sizing: border-box;
             overflow: auto;
@@ -108,7 +125,26 @@
         }
 
         #preview {
+            min-height: 30rem;
+            height: 30rem;
+            max-height: 30rem;
+            flex: 0 0 30rem;
             flex-shrink: 0;
+        }
+
+        #filenameModal {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+
+        #filenameModal:not(.hidden) {
+            display: flex;
         }
 
         /* Preview styling for proper header segregation */
@@ -268,7 +304,15 @@
         <!-- Header -->
         <div class="text-center mb-12 app-header">
             <h1 class="text-5xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                .MD to Word Converter
+                <span class="brand-lockup">
+                    <span class="brand-mark" aria-hidden="true">
+                        <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M6 3.75A1.75 1.75 0 0 1 7.75 2h6.5L19 6.75v13.5A1.75 1.75 0 0 1 17.25 22h-9.5A1.75 1.75 0 0 1 6 20.25V3.75Z"></path>
+                            <path d="M14 2v5h5M9 12h6M9 16h6"></path>
+                        </svg>
+                    </span>
+                    <span>.MD to Word Converter</span>
+                </span>
             </h1>
             <p class="text-gray-600 text-lg">Convert Markdown or Text to Word Documents</p>
         </div>
@@ -356,8 +400,7 @@
                         </svg>
                         Clear
                     </button>
-                </button>
-
+            </div>
         </div>
 
         <!-- Status Message -->
