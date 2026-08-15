@@ -10,6 +10,44 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-light.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <style>
+        .panel-shell {
+            height: 100%;
+        }
+
+        .panel-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-content {
+            flex: 1 0 auto;
+            min-height: 30rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #markdownInput,
+        #preview {
+            display: block;
+            width: 100%;
+            min-height: 30rem;
+            height: 30rem;
+            max-height: 30rem;
+            flex: 0 0 30rem;
+            box-sizing: border-box;
+            overflow: auto;
+        }
+
+        #markdownInput {
+            resize: none;
+            flex-shrink: 0;
+        }
+
+        #preview {
+            flex-shrink: 0;
+        }
+
         /* Preview styling for proper header segregation */
         #preview h1 {
             font-size: 1.875rem;
@@ -165,10 +203,10 @@
         </div>
 
         <!-- Main Container -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 items-stretch">
             <!-- Input Section -->
-            <div class="space-y-4">
-                <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-lg">
+            <div class="space-y-4 panel-shell">
+                <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-lg panel-card">
                     <h2 class="text-2xl font-bold mb-4 text-blue-600">Input</h2>
                     
                     <!-- File Upload -->
@@ -185,11 +223,11 @@
                     </div>
 
                     <!-- Text Area -->
-                    <div>
+                    <div class="panel-content">
                         <label class="block text-sm font-semibold mb-3 text-gray-700">Or Paste Content Here</label>
                         <textarea 
                             id="markdownInput" 
-                            class="w-full h-96 bg-white text-gray-800 border border-gray-300 rounded-lg p-4 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-400/30 resize-none font-mono text-sm"
+                            class="w-full bg-white text-gray-800 border border-gray-300 rounded-lg p-4 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-400/30 resize-none font-mono text-sm panel-content"
                             placeholder="# Heading&#10;&#10;This is your markdown content...&#10;&#10;- List item 1&#10;- List item 2&#10;&#10;**Bold text** and *italic text*"
                         ></textarea>
                     </div>
@@ -197,12 +235,12 @@
             </div>
 
             <!-- Preview Section -->
-            <div class="space-y-4">
-                <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-lg">
+            <div class="space-y-4 panel-shell">
+                <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-lg panel-card">
                     <h2 class="text-2xl font-bold mb-4 text-purple-600">Preview</h2>
                     <div 
                         id="preview" 
-                        class="bg-white text-gray-800 rounded-lg p-6 h-96 overflow-y-auto"
+                        class="bg-white text-gray-800 rounded-lg p-6 overflow-y-auto panel-content"
                     >
                         <p class="text-gray-500">Preview will appear here...</p>
                     </div>
