@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MD to Word Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-light.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <style>
+        /* Preview styling for proper header segregation */
+        #preview h1 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #1e3a8a;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #3b82f6;
+            display: block;
+        }
+
+        #preview h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2563eb;
+            margin-top: 1.25rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.375rem;
+            border-bottom: 2px solid #60a5fa;
+            display: block;
+        }
+
+        #preview h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #3b82f6;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid #93c5fd;
+            display: block;
+        }
+
+        #preview h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #60a5fa;
+            margin-top: 0.75rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        #preview p {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        #preview ul, #preview ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        #preview li {
+            margin-bottom: 0.5rem;
+        }
+
+        #preview code {
+            background-color: #f3f4f6;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+            color: #dc2626;
+        }
+
+        #preview pre {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            overflow-x: auto;
+        }
+
+        #preview pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        #preview blockquote {
+            border-left: 4px solid #3b82f6;
+            padding-left: 1rem;
+            margin-left: 0;
+            margin-bottom: 1rem;
+            font-style: italic;
+            color: #4b5563;
+        }
+
+        #preview table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+
+        #preview th, #preview td {
+            border: 1px solid #d1d5db;
+            padding: 0.75rem;
+            text-align: left;
+        }
+
+        #preview th {
+            background-color: #3b82f6;
+            color: white;
+            font-weight: 600;
+        }
+
+        #preview tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+
+        #preview hr {
+            border: none;
+            border-top: 2px solid #d1d5db;
+            margin: 1.5rem 0;
+        }
+
+        #preview .mermaid {
+            display: flex;
+            justify-content: center;
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        #preview .mermaid svg {
+            max-width: 100%;
+        }
+
+        #preview .mermaid-error {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-white to-purple-50 min-h-screen text-gray-800">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                MD to Word Converter
+            </h1>
+            <p class="text-gray-600 text-lg">Convert Markdown or Text to Word Documents</p>
+        </div>
+
+        <!-- Main Container -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Input Section -->
+            <div class="space-y-4">
+                <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-lg">
+                    <h2 class="text-2xl font-bold mb-4 text-blue-600">Input</h2>
+                    
+                    <!-- File Upload -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold mb-3 text-gray-700">Upload Markdown File</label>
+                        <div class="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer bg-gray-50" id="dropZone">
+                            <svg class="w-12 h-12 mx-auto mb-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                            <p class="text-gray-700 mb-2 font-medium">Drag and drop your .md file here</p>
+                            <p class="text-gray-500 text-sm">or click to browse</p>
+                            <input type="file" id="fileInput" accept=".md,.txt" class="hidden">
+                        </div>
+                    </div>
+
+                    <!-- Text Area -->
+                    <div>
+                        <label class="block text-sm font-semibold mb-3 text-gray-700">Or Paste Content Here</label>
+                        <textarea 
+                            id="markdownInput" 
+                            class="w-full h-96 bg-white text-gray-800 border border-gray-300 rounded-lg p-4 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-400/30 resize-none font-mono text-sm"
+                            placeholder="# Heading&#10;&#10;This is your markdown content...&#10;&#10;- List item 1&#10;- List item 2&#10;&#10;**Bold text** and *italic text*"
+                        ></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="space-y-4">
+                <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-lg">
+                    <h2 class="text-2xl font-bold mb-4 text-purple-600">Preview</h2>
+                    <div 
+                        id="preview" 
+                        class="bg-white text-gray-800 rounded-lg p-6 h-96 overflow-y-auto"
+                    >
+                        <p class="text-gray-500">Preview will appear here...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-lg">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button 
+                    id="downloadBtn" 
+                    class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-3 px-6 rounded-lg transition transform hover:scale-105 flex items-center justify-center gap-2 shadow-md"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                    </svg>
+                    Download Word Document
+                </button>
+
+                <button 
+                    id="copyBtn" 
+                    class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-lg transition transform hover:scale-105 flex items-center justify-center gap-2 shadow-md"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                    Copy to Clipboard
+                </button>
+
+                <button 
+                    id="clearBtn" 
+                    class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-3 px-6 rounded-lg transition transform hover:scale-105 flex items-center justify-center gap-2 shadow-md"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div id="statusMessage" class="mt-6 text-center text-sm font-semibold hidden"></div>
+
+        <!-- Filename Modal -->
+        <div id="filenameModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-8 shadow-2xl max-w-md w-full mx-4">
+                <h3 class="text-2xl font-bold text-gray-800 mb-4">Save Document</h3>
+                <label class="block text-sm font-semibold mb-3 text-gray-700">Enter filename (without .docx)</label>
+                <input 
+                    type="text" 
+                    id="filenameInput" 
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-400/30 text-gray-800 mb-6"
+                    placeholder="my-document"
+                    value="document"
+                >
+                <div class="flex gap-3">
+                    <button 
+                        id="confirmFilenameBtn" 
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition"
+                    >
+                        Download
+                    </button>
+                    <button 
+                        id="cancelFilenameBtn" 
+                        class="flex-1 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-12 text-gray-600 text-sm">
+            <p>✨ Convert Markdown to Word Documents • Tables • Code Blocks • Copy to Clipboard</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
