@@ -6,10 +6,73 @@
     <title>MD to Word Converter</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-light.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <style>
+        :root {
+            --ink: #172033;
+            --line: #dbe3ef;
+            --surface: rgba(255, 255, 255, 0.92);
+        }
+
+        body {
+            background:
+                radial-gradient(circle at 12% 8%, rgba(59, 130, 246, 0.16), transparent 28rem),
+                radial-gradient(circle at 88% 18%, rgba(168, 85, 247, 0.13), transparent 26rem),
+                #f8fafc;
+            color: var(--ink);
+        }
+
+        .app-header {
+            max-width: 52rem;
+            margin: 0 auto 2.5rem;
+        }
+
+        .app-header h1 {
+            letter-spacing: -0.02em;
+        }
+
+        .workspace-grid {
+            align-items: stretch;
+        }
+
+        .panel-card,
+        .action-bar {
+            background: var(--surface);
+            border-color: var(--line);
+            box-shadow: 0 18px 45px rgba(30, 41, 59, 0.08);
+            backdrop-filter: blur(12px);
+        }
+
+        .panel-card {
+            border-radius: 1rem;
+        }
+
+        .panel-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 2.25rem;
+        }
+
+        .action-bar {
+            border-radius: 1rem;
+        }
+
+        .action-button {
+            min-height: 3.25rem;
+            border-radius: 0.75rem;
+            transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(30, 41, 59, 0.14);
+            filter: saturate(1.08);
+        }
+
         .panel-shell {
             height: 100%;
         }
@@ -177,6 +240,7 @@
 
         #preview .mermaid svg {
             max-width: 100%;
+            height: auto;
         }
 
         #preview .mermaid-error {
@@ -190,12 +254,19 @@
             font-size: 0.875rem;
             white-space: pre-wrap;
         }
+
+        @media (max-width: 1023px) {
+            .panel-shell,
+            .panel-card {
+                height: auto;
+            }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-white to-purple-50 min-h-screen text-gray-800">
     <div class="container mx-auto px-4 py-8">
         <!-- Header -->
-        <div class="text-center mb-12">
+        <div class="text-center mb-12 app-header">
             <h1 class="text-5xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 MD to Word Converter
             </h1>
@@ -203,11 +274,14 @@
         </div>
 
         <!-- Main Container -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 items-stretch">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-stretch workspace-grid">
             <!-- Input Section -->
             <div class="space-y-4 panel-shell">
                 <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-lg panel-card">
-                    <h2 class="text-2xl font-bold mb-4 text-blue-600">Input</h2>
+                    <div class="panel-title mb-4">
+                        <h2 class="text-2xl font-bold text-blue-600">Input</h2>
+                        <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Markdown</span>
+                    </div>
                     
                     <!-- File Upload -->
                     <div class="mb-6">
@@ -237,7 +311,20 @@
             <!-- Preview Section -->
             <div class="space-y-4 panel-shell">
                 <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-lg panel-card">
-                    <h2 class="text-2xl font-bold mb-4 text-purple-600">Preview</h2>
+                    <div class="panel-title mb-4">
+                        <h2 class="text-2xl font-bold text-purple-600">Preview</h2>
+                        <button
+                            id="copyPreviewBtn"
+                            type="button"
+                            class="flex items-center gap-2 text-sm font-semibold text-purple-600 border border-purple-300 hover:bg-purple-50 rounded-lg px-3 py-1.5 transition"
+                            title="Copy formatted preview to clipboard"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                            </svg>
+                            Copy
+                        </button>
+                    </div>
                     <div 
                         id="preview" 
                         class="bg-white text-gray-800 rounded-lg p-6 overflow-y-auto panel-content"
@@ -249,38 +336,28 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-lg">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="action-bar p-5 border">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button 
                     id="downloadBtn" 
-                    class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-3 px-6 rounded-lg transition transform hover:scale-105 flex items-center justify-center gap-2 shadow-md"
+                    class="action-button bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-3 px-6 flex items-center justify-center gap-2 shadow-md"
                 >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
                     </svg>
                     Download Word Document
                 </button>
-
-                <button 
-                    id="copyBtn" 
-                    class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-lg transition transform hover:scale-105 flex items-center justify-center gap-2 shadow-md"
-                >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                    </svg>
-                    Copy to Clipboard
+                    <button 
+                        id="clearBtn" 
+                        class="action-button bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 to-red-700 text-white font-bold py-3 px-6 flex items-center justify-center gap-2 shadow-md"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        Clear
+                    </button>
                 </button>
 
-                <button 
-                    id="clearBtn" 
-                    class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-3 px-6 rounded-lg transition transform hover:scale-105 flex items-center justify-center gap-2 shadow-md"
-                >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                    Clear
-                </button>
-            </div>
         </div>
 
         <!-- Status Message -->
@@ -317,7 +394,7 @@
 
         <!-- Footer -->
         <div class="text-center mt-12 text-gray-600 text-sm">
-            <p>✨ Convert Markdown to Word Documents • Tables • Code Blocks • Copy to Clipboard</p>
+            <p>✨ Convert Markdown to Word Documents • Tables • Code Blocks</p>
         </div>
     </div>
 

@@ -25,7 +25,7 @@ function checkLibraries() {
 const markdownInput = document.getElementById('markdownInput');
 const preview = document.getElementById('preview');
 const downloadBtn = document.getElementById('downloadBtn');
-const copyBtn = document.getElementById('copyBtn');
+const copyPreviewBtn = document.getElementById('copyPreviewBtn');
 const clearBtn = document.getElementById('clearBtn');
 const fileInput = document.getElementById('fileInput');
 const dropZone = document.getElementById('dropZone');
@@ -150,6 +150,12 @@ async function renderMermaidDiagrams() {
 }
 
 
+// Strip characters that are illegal in XML 1.0; if left in, Word cannot parse document.xml
+function sanitizeForXml(value) {
+    if (!value || typeof value !== 'string') return '';
+    return value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '');
+}
+
 function stripHtmlTags(value) {
     if (!value || typeof value !== 'string') return '';
 
@@ -171,13 +177,15 @@ function stripHtmlTags(value) {
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
         .replace(/<[^>]+>/g, '');
 
-    return sanitized
+    sanitized = sanitized
         .replace(/\r\n/g, '\n')
         .replace(/\n{3,}/g, '\n\n')
         .replace(/\s*\n\s*/g, '\n')
         .replace(/[\t ]+\n/g, '\n')
         .replace(/\s{2,}/g, ' ')
         .trim();
+
+    return sanitizeForXml(sanitized);
 }
 
 // Parse markdown tables
@@ -281,6 +289,22 @@ downloadBtn.addEventListener('click', async () => {
         console.log('Generated elements:', docxElements.length);
         
         const doc = new docx.Document({
+            numbering: {
+                config: [{
+                    reference: 'markdown-numbered-list',
+                    levels: [{
+                        level: 0,
+                        format: docx.LevelFormat.DECIMAL,
+                        text: '%1.',
+                        alignment: docx.AlignmentType.LEFT,
+                        style: {
+                            paragraph: {
+                                indent: { left: 720, hanging: 360 }
+                            }
+                        }
+                    }]
+                }]
+            },
             sections: [{
                 properties: {},
                 children: docxElements
@@ -313,6 +337,61 @@ function hideFilenameModal() {
     pendingDocxData = null;
 }
 
+// Verify the generated docx is a valid zip with well-formed document.xml before letting the user download it
+async function validateDocxBlob(blob) {
+    if (typeof JSZip === 'undefined') {
+        console.warn('JSZip not available, skipping docx validation');
+        return { valid: true };
+    }
+
+    try {
+        const zip = await JSZip.loadAsync(blob);
+        const documentXmlFile = zip.file('word/document.xml');
+        if (!documentXmlFile) {
+            return { valid: false, error: 'Missing word/document.xml in generated package' };
+        }
+
+        const xml = await documentXmlFile.async('string');
+        const parser = new DOMParser();
+        const parsed = parser.parseFromString(xml, 'application/xml');
+        const parserError = parsed.querySelector('parsererror');
+        if (parserError) {
+            return { valid: false, error: 'document.xml is not well-formed XML' };
+        }
+
+        const numberingXmlFile = zip.file('word/numbering.xml');
+        if (numberingXmlFile) {
+            const numberingXml = await numberingXmlFile.async('string');
+            const numbering = parser.parseFromString(numberingXml, 'application/xml');
+            if (numbering.querySelector('parsererror')) {
+                return { valid: false, error: 'numbering.xml is not well-formed XML' };
+            }
+
+            const definedIds = new Set(
+                Array.from(numbering.getElementsByTagNameNS('*', 'num'))
+                    .map((num) => num.getAttribute('w:numId') || num.getAttributeNS('*', 'numId'))
+                    .filter(Boolean)
+            );
+            const referencedIds = Array.from(parsed.getElementsByTagNameNS('*', 'numId'))
+                .map((numId) => numId.getAttribute('w:val') || numId.getAttributeNS('*', 'val'))
+                .filter(Boolean);
+            const missingId = referencedIds.find((id) => !definedIds.has(id));
+            if (missingId) {
+                return { valid: false, error: `document.xml references undefined numbering ID ${missingId}` };
+            }
+        }
+
+        if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(xml)) {
+            return { valid: false, error: 'document.xml contains invalid control characters' };
+        }
+
+        return { valid: true };
+    } catch (error) {
+        console.error('Docx validation error:', error);
+        return { valid: false, error: error.message || 'Unknown validation error' };
+    }
+}
+
 // Confirm filename and download
 confirmFilenameBtn.addEventListener('click', async () => {
     const filename = filenameInput.value.trim() || 'document';
@@ -325,7 +404,15 @@ confirmFilenameBtn.addEventListener('click', async () => {
         console.log('Starting document conversion to blob...');
         const blob = await docx.Packer.toBlob(pendingDocxData);
         console.log('Blob created successfully:', blob.size, 'bytes');
-        
+
+        const validation = await validateDocxBlob(blob);
+        if (!validation.valid) {
+            console.error('Generated docx failed validation:', validation.error);
+            showStatus(`Export failed validation (${validation.error}). Please try again.`, 'error');
+            hideFilenameModal();
+            return;
+        }
+
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -368,30 +455,42 @@ async function renderMermaidToImage(graphDefinition) {
     const renderId = `mermaid-export-${mermaidExportCount++}`;
     const { svg } = await mermaid.render(renderId, graphDefinition);
 
+    const svgDocument = new DOMParser().parseFromString(svg, 'image/svg+xml');
+    const svgElement = svgDocument.documentElement;
+    const viewBox = svgElement.getAttribute('viewBox');
+    const viewBoxParts = viewBox ? viewBox.trim().split(/[\s,]+/).map(Number) : [];
+    const sourceWidth = viewBoxParts[2] > 0 ? viewBoxParts[2] : Number.parseFloat(svgElement.getAttribute('width')) || 800;
+    const sourceHeight = viewBoxParts[3] > 0 ? viewBoxParts[3] : Number.parseFloat(svgElement.getAttribute('height')) || 600;
+    const renderScale = Math.min(2, 1600 / sourceWidth, 1200 / sourceHeight);
+    const renderWidth = Math.max(1, Math.round(sourceWidth * renderScale));
+    const renderHeight = Math.max(1, Math.round(sourceHeight * renderScale));
+    svgElement.setAttribute('width', String(renderWidth));
+    svgElement.setAttribute('height', String(renderHeight));
+    svgElement.removeAttribute('style');
+    const normalizedSvg = new XMLSerializer().serializeToString(svgElement);
+
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
-            const scale = 2;
             const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth * scale;
-            canvas.height = img.naturalHeight * scale;
+            canvas.width = renderWidth;
+            canvas.height = renderHeight;
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.scale(scale, scale);
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, renderWidth, renderHeight);
             canvas.toBlob((blob) => {
                 if (!blob) {
                     reject(new Error('Failed to convert diagram to image'));
                     return;
                 }
                 blob.arrayBuffer().then((buffer) => {
-                    resolve({ buffer, width: img.naturalWidth, height: img.naturalHeight });
+                    resolve({ buffer, width: renderWidth, height: renderHeight });
                 }).catch(reject);
             }, 'image/png');
         };
         img.onerror = () => reject(new Error('Failed to load diagram image'));
-        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(normalizedSvg);
     });
 }
 
@@ -416,9 +515,11 @@ async function markdownToDocx(markdown) {
                         if (codeBlock.trim() && codeLanguage === 'mermaid') {
                             try {
                                 const { buffer, width, height } = await renderMermaidToImage(codeBlock.trim());
-                                const maxWidth = 500;
-                                const displayWidth = Math.min(width, maxWidth);
-                                const displayHeight = displayWidth * (height / width);
+                                const maxWidth = 600;
+                                const maxHeight = 680;
+                                const fitScale = Math.min(1, maxWidth / width, maxHeight / height);
+                                const displayWidth = Math.max(1, Math.round(width * fitScale));
+                                const displayHeight = Math.max(1, Math.round(height * fitScale));
                                 elements.push(new docx.Paragraph({
                                     children: [new docx.ImageRun({
                                         data: buffer,
@@ -441,7 +542,7 @@ async function markdownToDocx(markdown) {
                         } else if (codeBlock.trim()) {
                             const codeLines = codeBlock.replace(/\n$/, '').split('\n');
                             const codeRuns = codeLines.map((codeLine, idx) => new docx.TextRun({
-                                text: codeLine.length > 0 ? codeLine : ' ',
+                                text: sanitizeForXml(codeLine) || ' ',
                                 font: 'Courier New',
                                 size: 20,
                                 color: '1F2937',
@@ -510,7 +611,7 @@ async function markdownToDocx(markdown) {
                         quoteIndex++;
                     }
                     const quoteRuns = quoteLines.map((quoteLine, idx) => new docx.TextRun({
-                        text: quoteLine,
+                        text: sanitizeForXml(quoteLine),
                         italics: true,
                         color: '4B5563',
                         break: idx > 0 ? 1 : 0
@@ -537,7 +638,7 @@ async function markdownToDocx(markdown) {
                     elements.push(new docx.Paragraph({
                         heading: docx.HeadingLevel.HEADING_1,
                         children: [new docx.TextRun({
-                            text: line.replace('# ', '').trim(),
+                            text: sanitizeForXml(line.replace('# ', '').trim()),
                             bold: true,
                             size: 32,
                             color: '1E3A8A'
@@ -548,7 +649,7 @@ async function markdownToDocx(markdown) {
                     elements.push(new docx.Paragraph({
                         heading: docx.HeadingLevel.HEADING_2,
                         children: [new docx.TextRun({
-                            text: line.replace('## ', '').trim(),
+                            text: sanitizeForXml(line.replace('## ', '').trim()),
                             bold: true,
                             size: 28,
                             color: '2563EB'
@@ -559,7 +660,7 @@ async function markdownToDocx(markdown) {
                     elements.push(new docx.Paragraph({
                         heading: docx.HeadingLevel.HEADING_3,
                         children: [new docx.TextRun({
-                            text: line.replace('### ', '').trim(),
+                            text: sanitizeForXml(line.replace('### ', '').trim()),
                             bold: true,
                             size: 24,
                             color: '3B82F6'
@@ -570,7 +671,7 @@ async function markdownToDocx(markdown) {
                     elements.push(new docx.Paragraph({
                         heading: docx.HeadingLevel.HEADING_4,
                         children: [new docx.TextRun({
-                            text: line.replace('#### ', '').trim(),
+                            text: sanitizeForXml(line.replace('#### ', '').trim()),
                             bold: true,
                             size: 22,
                             color: '60A5FA'
@@ -593,7 +694,10 @@ async function markdownToDocx(markdown) {
                     if (match) {
                         elements.push(new docx.Paragraph({
                             children: processInlineFormatting(match[2].trim()),
-                            numbering: { level: 0, instance: 0 },
+                            numbering: {
+                                reference: 'markdown-numbered-list',
+                                level: 0
+                            },
                             spacing: { line: 240, after: 100 }
                         }));
                     }
@@ -814,28 +918,46 @@ function processInlineFormatting(text) {
     }
 }
 
-// Copy to Clipboard
-copyBtn.addEventListener('click', async () => {
+// Copy the rendered preview to the clipboard as rich text, so pasting keeps formatting instead of raw markdown
+async function copyFormattedPreview(button) {
     const markdown = markdownInput.value;
-    
+
     if (!markdown.trim()) {
         showStatus('Nothing to copy', 'error');
         return;
     }
 
+    const html = preview.innerHTML;
+    const plainText = preview.innerText;
+
     try {
-        await navigator.clipboard.writeText(markdown);
-        showStatus('Content copied to clipboard! 📋', 'success');
-        
-        // Animate button
-        copyBtn.innerHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></svg> Copied!';
-        setTimeout(() => {
-            copyBtn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg> Copy to Clipboard';
-        }, 2000);
+        if (window.ClipboardItem && navigator.clipboard.write) {
+            const item = new ClipboardItem({
+                'text/html': new Blob([html], { type: 'text/html' }),
+                'text/plain': new Blob([plainText], { type: 'text/plain' })
+            });
+            await navigator.clipboard.write([item]);
+        } else {
+            await navigator.clipboard.writeText(plainText);
+        }
+
+        showStatus('Formatted content copied to clipboard! 📋', 'success');
+
+        if (button) {
+            const originalHtml = button.innerHTML;
+            const iconSize = button.id === 'copyPreviewBtn' ? 'w-4 h-4' : 'w-5 h-5';
+            button.innerHTML = `<svg class="${iconSize}" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></svg> Copied!`;
+            setTimeout(() => {
+                button.innerHTML = originalHtml;
+            }, 2000);
+        }
     } catch (error) {
+        console.error('Error copying formatted content:', error);
         showStatus('Failed to copy to clipboard', 'error');
     }
-});
+}
+
+copyPreviewBtn.addEventListener('click', () => copyFormattedPreview(copyPreviewBtn));
 
 // Clear All
 clearBtn.addEventListener('click', () => {
