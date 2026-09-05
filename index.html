@@ -6,10 +6,20 @@
     <title>MD to Word Converter</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23111827'/%3E%3Crect x='8' y='8' width='38' height='48' rx='6' fill='%232563eb'/%3E%3Cpath d='M17 22l6 7 6-7M17 39h12' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M42 24h12M49 18l6 6-6 6' fill='none' stroke='%2338bdf8' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' };</script>
     <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-light.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@viz-js/viz@3.11.0/lib/viz-standalone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.iife.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+    <link id="hljsTheme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-light.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <style>
         :root {
@@ -18,13 +28,31 @@
             --surface: rgba(255, 255, 255, 0.92);
         }
 
+        html.dark {
+            --ink: #e5e9f2;
+            --line: #334155;
+            --surface: rgba(15, 23, 42, 0.92);
+        }
+
         body {
             background:
                 radial-gradient(circle at 12% 8%, rgba(59, 130, 246, 0.16), transparent 28rem),
                 radial-gradient(circle at 88% 18%, rgba(168, 85, 247, 0.13), transparent 26rem),
                 #f8fafc;
             color: var(--ink);
+            transition: background-color 200ms ease, color 200ms ease;
         }
+
+        html.dark body {
+            background:
+                radial-gradient(circle at 12% 8%, rgba(59, 130, 246, 0.12), transparent 28rem),
+                radial-gradient(circle at 88% 18%, rgba(168, 85, 247, 0.10), transparent 26rem),
+                #0f172a;
+        }
+
+        .theme-icon-dark { display: none; }
+        html.dark .theme-icon-light { display: none; }
+        html.dark .theme-icon-dark { display: inline-block; }
 
         .app-header {
             max-width: 52rem;
@@ -67,6 +95,7 @@
 
         .panel-card {
             border-radius: 1rem;
+            position: relative;
         }
 
         .panel-title {
@@ -74,6 +103,15 @@
             align-items: center;
             justify-content: space-between;
             min-height: 2.25rem;
+        }
+
+        .dropdown-panel {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            width: min(20rem, calc(100% - 1rem));
+            z-index: 20;
         }
 
         .action-bar {
@@ -315,9 +353,193 @@
                 height: auto;
             }
         }
+
+        /* GitHub-style alert callouts */
+        #preview .md-alert {
+            border-left-width: 4px;
+            border-left-style: solid;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            font-style: normal;
+            border-radius: 0.375rem;
+        }
+
+        #preview .md-alert-title {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
+
+        #preview .md-alert-title svg {
+            width: 1.1rem;
+            height: 1.1rem;
+        }
+
+        #preview .md-alert-note { border-color: #2563eb; background: #eff6ff; color: #1e3a8a; }
+        #preview .md-alert-tip { border-color: #16a34a; background: #f0fdf4; color: #14532d; }
+        #preview .md-alert-important { border-color: #7c3aed; background: #f5f3ff; color: #4c1d95; }
+        #preview .md-alert-warning { border-color: #d97706; background: #fffbeb; color: #92400e; }
+        #preview .md-alert-caution { border-color: #dc2626; background: #fef2f2; color: #7f1d1d; }
+
+        html.dark #preview .md-alert-note { background: rgba(37, 99, 235, 0.15); color: #bfdbfe; }
+        html.dark #preview .md-alert-tip { background: rgba(22, 163, 74, 0.15); color: #bbf7d0; }
+        html.dark #preview .md-alert-important { background: rgba(124, 58, 237, 0.18); color: #ddd6fe; }
+        html.dark #preview .md-alert-warning { background: rgba(217, 119, 6, 0.18); color: #fde68a; }
+        html.dark #preview .md-alert-caution { background: rgba(220, 38, 38, 0.18); color: #fecaca; }
+
+        /* Search highlighting */
+        #preview mark.search-mark {
+            background-color: #fde047;
+            color: #172033;
+            border-radius: 0.15rem;
+            padding: 0 0.1rem;
+        }
+
+        #preview mark.search-mark-current {
+            background-color: #f97316;
+            color: #ffffff;
+        }
+
+        /* Dark mode preview overrides */
+        html.dark #preview {
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+
+        html.dark #preview code {
+            background-color: #1e293b;
+            color: #fca5a5;
+        }
+
+        html.dark #preview pre {
+            background-color: #1e293b;
+            border-color: #334155;
+        }
+
+        html.dark #preview blockquote {
+            color: #cbd5e1;
+        }
+
+        html.dark #preview table {
+            border-color: #475569;
+        }
+
+        html.dark #preview th, html.dark #preview td {
+            border-color: #475569 !important;
+        }
+
+        html.dark #preview tr:nth-child(even) {
+            background-color: #1e293b;
+        }
+
+        html.dark #preview .mermaid {
+            background-color: #1e293b;
+            border-color: #334155;
+        }
+
+        html.dark #markdownInput {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border-color: #334155;
+        }
+
+        /* Graphviz / PlantUML diagrams */
+        #preview .graphviz, #preview .plantuml {
+            display: flex;
+            justify-content: center;
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        #preview .graphviz svg, #preview .plantuml-diagram {
+            max-width: 100%;
+            height: auto;
+        }
+
+        html.dark #preview .graphviz, html.dark #preview .plantuml {
+            background-color: #1e293b;
+            border-color: #334155;
+        }
+
+        /* RTL support */
+        #preview[dir="rtl"], #markdownInput[dir="rtl"] {
+            text-align: right;
+        }
+
+        #preview[dir="rtl"] ul, #preview[dir="rtl"] ol {
+            margin-left: 0;
+            margin-right: 1.5rem;
+        }
+
+        #preview[dir="rtl"] blockquote {
+            border-left: none;
+            border-right: 4px solid #3b82f6;
+            padding-right: 1rem;
+            padding-left: 0;
+        }
+
+        #preview[dir="rtl"] .md-alert {
+            border-left: none;
+            border-right-width: 4px;
+            border-right-style: solid;
+            padding-right: 1rem;
+            padding-left: 1rem;
+        }
+
+        /* Annotations */
+        #preview mark.annotation-mark {
+            background-color: #fef08a;
+            border-bottom: 2px dotted #ca8a04;
+            cursor: help;
+            padding: 0 0.1rem;
+        }
+
+        html.dark #preview mark.annotation-mark {
+            background-color: rgba(202, 138, 4, 0.35);
+            color: #fef3c7;
+        }
+
+        /* Presentation mode */
+        #presentationSlide h1 { font-size: 2.25rem; font-weight: 700; color: #1e3a8a; margin-bottom: 1rem; }
+        #presentationSlide h2 { font-size: 1.75rem; font-weight: 700; color: #2563eb; margin-bottom: 0.75rem; }
+        #presentationSlide h3 { font-size: 1.4rem; font-weight: 600; color: #3b82f6; margin-bottom: 0.5rem; }
+        #presentationSlide p { margin-bottom: 1rem; line-height: 1.7; }
+        #presentationSlide ul, #presentationSlide ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+        #presentationSlide code { background-color: #f3f4f6; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-family: 'Courier New', monospace; }
+        #presentationSlide pre { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; overflow-x: auto; }
+        html.dark #presentationSlide { color: #e2e8f0; }
+        html.dark #presentationSlide code, html.dark #presentationSlide pre { background-color: #1e293b; color: #e2e8f0; border-color: #334155; }
     </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 via-white to-purple-50 min-h-screen text-gray-800">
+<body class="bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 min-h-screen text-gray-800 dark:text-slate-200">
+    <button
+        id="themeToggleBtn"
+        type="button"
+        aria-pressed="false"
+        title="Toggle dark mode"
+        class="fixed top-4 right-4 z-40 flex items-center justify-center w-11 h-11 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 shadow-md text-gray-700 dark:text-slate-200 hover:scale-105 transition"
+    >
+        <svg class="w-5 h-5 theme-icon-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+        </svg>
+        <svg class="w-5 h-5 theme-icon-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+        </svg>
+    </button>
+    <button
+        id="rtlToggleBtn"
+        type="button"
+        aria-pressed="false"
+        title="Toggle right-to-left text direction"
+        class="fixed top-4 right-16 z-40 flex items-center justify-center w-11 h-11 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 shadow-md text-gray-700 dark:text-slate-200 hover:scale-105 transition text-sm font-bold"
+    >
+        RTL
+    </button>
     <div class="container mx-auto px-4 py-8">
         <!-- Header -->
         <div class="text-center mb-12 app-header">
@@ -332,35 +554,48 @@
                     <span>.MD to Word Converter</span>
                 </span>
             </h1>
-            <p class="text-gray-600 text-lg">Convert Markdown or Text to Word Documents</p>
+            <p class="text-gray-600 dark:text-slate-400 text-lg">Convert Markdown or Text to Word Documents</p>
         </div>
 
         <!-- Main Container -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-stretch workspace-grid">
             <!-- Input Section -->
             <div class="space-y-4 panel-shell">
-                <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-lg panel-card">
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700 shadow-lg panel-card">
                     <div class="panel-title mb-4">
-                        <h2 class="text-2xl font-bold text-blue-600">Input</h2>
+                        <h2 class="text-2xl font-bold text-blue-600 dark:text-blue-400">Input</h2>
                         <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Markdown</span>
                     </div>
                     
                     <!-- File Upload -->
                     <div class="mb-6">
-                        <label class="block text-sm font-semibold mb-3 text-gray-700">Upload Markdown File</label>
-                        <div class="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer bg-gray-50" id="dropZone">
+                        <label class="block text-sm font-semibold mb-3 text-gray-700 dark:text-slate-300">Upload Markdown File(s)</label>
+                        <div class="border-2 border-dashed border-blue-300 dark:border-blue-500/50 rounded-lg p-6 text-center hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition cursor-pointer bg-gray-50 dark:bg-slate-900/40" id="dropZone">
                             <svg class="w-12 h-12 mx-auto mb-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                             </svg>
-                            <p class="text-gray-700 mb-2 font-medium">Drag and drop your .md file here</p>
-                            <p class="text-gray-500 text-sm">or click to browse</p>
-                            <input type="file" id="fileInput" accept=".md,.txt" class="hidden">
+                            <p class="text-gray-700 dark:text-slate-300 mb-2 font-medium">Drag and drop one or more .md files here</p>
+                            <p class="text-gray-500 dark:text-slate-400 text-sm">or click to browse</p>
+                            <input type="file" id="fileInput" accept=".md,.txt" multiple class="hidden">
+                        </div>
+                    </div>
+
+                    <!-- Folder Browser -->
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300">Browse a Folder</label>
+                            <button id="openFolderBtn" type="button" class="text-xs font-semibold text-blue-600 dark:text-blue-300 border border-blue-300 dark:border-slate-600 rounded-lg px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-slate-700">Open Folder</button>
+                        </div>
+                        <div id="folderPanel" class="hidden space-y-3">
+                            <input id="folderSearchInput" type="text" placeholder="Search all files in folder..." class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:border-blue-500">
+                            <div id="folderSearchResults" class="max-h-32 overflow-y-auto space-y-1"></div>
+                            <div id="folderTree" class="max-h-48 overflow-y-auto border border-gray-200 dark:border-slate-700 rounded-lg p-2 space-y-1"></div>
                         </div>
                     </div>
 
                     <!-- Text Area -->
                     <div class="panel-content">
-                        <label class="block text-sm font-semibold mb-3 text-gray-700">Or Paste Content Here</label>
+                        <label class="block text-sm font-semibold mb-3 text-gray-700 dark:text-slate-300">Or Paste Content Here</label>
                         <textarea 
                             id="markdownInput" 
                             class="w-full bg-white text-gray-800 border border-gray-300 rounded-lg p-4 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-400/30 resize-none font-mono text-sm panel-content"
@@ -372,20 +607,86 @@
 
             <!-- Preview Section -->
             <div class="space-y-4 panel-shell">
-                <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-lg panel-card">
-                    <div class="panel-title mb-4">
-                        <h2 class="text-2xl font-bold text-purple-600">Preview</h2>
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700 shadow-lg panel-card">
+                    <div class="panel-title mb-3">
+                        <h2 class="text-2xl font-bold text-purple-600 dark:text-purple-400">Preview</h2>
                         <button
                             id="copyPreviewBtn"
                             type="button"
-                            class="flex items-center gap-2 text-sm font-semibold text-purple-600 border border-purple-300 hover:bg-purple-50 rounded-lg px-3 py-1.5 transition"
+                            class="flex items-center gap-2 text-sm font-semibold text-purple-600 border border-purple-300 hover:bg-purple-50 rounded-lg px-3 py-1.5 transition whitespace-nowrap"
                             title="Copy formatted preview to clipboard"
                         >
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                             </svg>
                             Copy
                         </button>
+                    </div>
+
+                    <div class="relative flex flex-wrap items-center gap-2 mb-4">
+                        <button
+                            id="searchToggleBtn"
+                            type="button"
+                            aria-label="Search preview"
+                            class="flex items-center justify-center w-9 h-9 text-purple-600 border border-purple-300 hover:bg-purple-50 rounded-lg transition"
+                            title="Search preview"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"></path>
+                            </svg>
+                        </button>
+                        <button
+                            id="tocToggleBtn"
+                            type="button"
+                            aria-label="Table of contents"
+                            class="flex items-center justify-center w-9 h-9 text-purple-600 border border-purple-300 hover:bg-purple-50 rounded-lg transition"
+                            title="Table of contents"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
+                            </svg>
+                        </button>
+                        <button
+                            id="mindmapBtn"
+                            type="button"
+                            aria-label="Mind map view"
+                            class="flex items-center justify-center w-9 h-9 text-purple-600 border border-purple-300 hover:bg-purple-50 rounded-lg transition"
+                            title="Mind map view"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5a2 2 0 114 0 2 2 0 01-4 0zM4 19a2 2 0 114 0 2 2 0 01-4 0zM16 19a2 2 0 114 0 2 2 0 01-4 0zM11 6h-2a4 4 0 00-4 4v3m6-7h2a4 4 0 014 4v3M8 15v0m8 0v0"></path>
+                            </svg>
+                        </button>
+                        <button
+                            id="presentBtn"
+                            type="button"
+                            aria-label="Presentation mode"
+                            class="flex items-center justify-center w-9 h-9 text-purple-600 border border-purple-300 hover:bg-purple-50 rounded-lg transition"
+                            title="Presentation mode"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16v10H4zM8 20h8M12 16v4"></path>
+                            </svg>
+                        </button>
+
+                        <div id="searchPanel" class="dropdown-panel hidden bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg shadow-xl p-3">
+                            <div class="flex items-center gap-1">
+                                <input
+                                    id="searchInput"
+                                    type="text"
+                                    placeholder="Search preview..."
+                                    class="flex-1 min-w-0 px-2 py-1.5 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 rounded-md focus:outline-none focus:border-purple-500"
+                                >
+                                <button id="searchPrevBtn" type="button" title="Previous match" class="px-2 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">&#9664;</button>
+                                <button id="searchNextBtn" type="button" title="Next match" class="px-2 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">&#9654;</button>
+                                <button id="searchCloseBtn" type="button" title="Close search" class="px-2 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">&#10005;</button>
+                            </div>
+                            <p id="searchCount" class="mt-2 text-xs text-gray-500 dark:text-slate-400">0/0</p>
+                        </div>
+
+                        <div id="tocPanel" class="dropdown-panel hidden bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg shadow-xl p-3 max-h-72 overflow-y-auto">
+                            <nav id="tocList" class="text-sm space-y-1"></nav>
+                        </div>
                     </div>
                     <div 
                         id="preview" 
@@ -399,7 +700,7 @@
 
         <!-- Action Buttons -->
         <div class="action-bar p-5 border">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <button 
                     id="downloadBtn" 
                     class="action-button bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-3 px-6 flex items-center justify-center gap-2 shadow-md"
@@ -409,6 +710,24 @@
                     </svg>
                     Download Word Document
                 </button>
+                    <button
+                        id="exportPdfBtn"
+                        class="action-button bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-bold py-3 px-6 flex items-center justify-center gap-2 shadow-md"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18h12M6 18a2 2 0 01-2-2V8a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2M6 18v2a2 2 0 002 2h8a2 2 0 002-2v-2M9 11h6"></path>
+                        </svg>
+                        Export PDF
+                    </button>
+                    <button
+                        id="exportHtmlBtn"
+                        class="action-button bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-3 px-6 flex items-center justify-center gap-2 shadow-md"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16M6 8L2 12l4 4M18 8l4 4-4 4"></path>
+                        </svg>
+                        Export HTML
+                    </button>
                     <button 
                         id="clearBtn" 
                         class="action-button bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 to-red-700 text-white font-bold py-3 px-6 flex items-center justify-center gap-2 shadow-md"
@@ -426,13 +745,13 @@
 
         <!-- Filename Modal -->
         <div id="filenameModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg p-8 shadow-2xl max-w-md w-full mx-4">
-                <h3 class="text-2xl font-bold text-gray-800 mb-4">Save Document</h3>
-                <label class="block text-sm font-semibold mb-3 text-gray-700">Enter filename (without .docx)</label>
+            <div class="bg-white dark:bg-slate-800 rounded-lg p-8 shadow-2xl max-w-md w-full mx-4">
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-4">Save Document</h3>
+                <label class="block text-sm font-semibold mb-3 text-gray-700 dark:text-slate-300">Enter filename (without .docx)</label>
                 <input 
                     type="text" 
                     id="filenameInput" 
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-400/30 text-gray-800 mb-6"
+                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-400/30 text-gray-800 mb-6"
                     placeholder="my-document"
                     value="document"
                 >
@@ -454,11 +773,35 @@
         </div>
 
         <!-- Footer -->
-        <div class="text-center mt-12 text-gray-600 text-sm">
+        <div class="text-center mt-12 text-gray-600 dark:text-slate-400 text-sm">
             <p>✨ Convert Markdown to Word Documents • Tables • Code Blocks</p>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Presentation Mode Overlay -->
+    <div id="presentationOverlay" class="hidden fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
+        <div class="flex items-center justify-between px-6 py-3 border-b border-gray-200 dark:border-slate-700">
+            <span id="presentationCounter" class="text-sm font-semibold text-gray-500 dark:text-slate-400">1 / 1</span>
+            <button id="presentationCloseBtn" type="button" class="text-sm font-semibold text-gray-600 dark:text-slate-300 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-slate-800">Close &#10005;</button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-10 flex items-center justify-center">
+            <div id="presentationSlide" class="max-w-4xl w-full text-lg"></div>
+        </div>
+        <div class="flex items-center justify-center gap-4 py-4 border-t border-gray-200 dark:border-slate-700">
+            <button id="presentationPrevBtn" type="button" class="text-sm font-semibold border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-800 dark:text-slate-200">&#9664; Prev</button>
+            <button id="presentationNextBtn" type="button" class="text-sm font-semibold border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-800 dark:text-slate-200">Next &#9654;</button>
+        </div>
+    </div>
+
+    <!-- Mind Map Overlay -->
+    <div id="mindmapOverlay" class="hidden fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
+        <div class="flex items-center justify-between px-6 py-3 border-b border-gray-200 dark:border-slate-700">
+            <h3 class="font-bold text-gray-800 dark:text-slate-100">Mind Map</h3>
+            <button id="mindmapCloseBtn" type="button" class="text-sm font-semibold text-gray-600 dark:text-slate-300 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-slate-800">Close &#10005;</button>
+        </div>
+        <svg id="mindmapSvg" class="flex-1 w-full h-full"></svg>
+    </div>
+
+    <script type="module" src="src/app.js"></script>
 </body>
 </html>
