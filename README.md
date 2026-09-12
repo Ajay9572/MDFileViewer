@@ -1,324 +1,215 @@
-# MD to Word Converter 📄
+# MD to Word Converter
 
-A beautiful, modern web application that converts Markdown and text files into Word documents with a live preview and copy-to-clipboard functionality. Built with a clean light theme for comfortable viewing.
+A browser-based Markdown workspace with live preview, diagrams, math, document export, folder browsing, presentation mode, and Word conversion. Files are processed locally in the browser unless a feature explicitly uses a remote renderer such as PlantUML.
 
-## Features ✨
+## Features
 
-- **📝 Markdown to Word Conversion** - Convert your markdown content into professional Word documents
-- **📤 File Upload Support** - Upload `.md` and `.txt` files directly (drag & drop or click to browse)
-- **👁️ Live Preview** - See your markdown rendered in real-time
-- **📋 Copy to Clipboard** - Quickly copy your content to clipboard
-- **📊 Table Support** - Full markdown table support with proper formatting in Word documents
-- **💻 Code Blocks & Snippets** - Syntax highlighting and proper code block formatting in exports
-- **💬 Block Quotes** - Beautiful formatted quotes with left border styling
-- **📝 Headers & Lists** - Multiple heading levels (H1-H4), ordered and unordered lists
-- **💾 Custom Filenames** - Choose your document filename when downloading
-- **🎨 Light Theme UI** - Beautiful gradient design with Tailwind CSS (light mode)
-- **⚡ No Server Needed** - Runs entirely in the browser (all libraries via CDN)
-- **📱 Responsive Design** - Works on desktop and mobile devices
+- GitHub-flavored Markdown through `marked.js`, including tables, fenced code, block quotes, headings, lists, and horizontal rules
+- GitHub-style alerts: `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, and `CAUTION`
+- Mermaid diagrams in preview and DOCX export
+- Graphviz diagrams with `dot` or `graphviz` fences in preview and DOCX export
+- PlantUML diagrams with `plantuml` or `puml` fences in preview and DOCX export
+- KaTeX inline and display math using `$...$` and `$$...$$`
+- Live preview with syntax highlighting and live refresh after folder files change
+- Dark mode with persisted preference and dark Mermaid/highlight.js themes
+- Right-to-left editor and preview mode
+- Table of contents generated from headings
+- Search within the current preview with match navigation
+- Multi-file drag-and-drop and multi-select upload
+- Folder browser with recursive Markdown discovery and search across files
+- Presentation mode with `---` slide separators and keyboard navigation
+- Interactive mind maps generated from document structure, with zoom, pan, and fit controls
+- Text annotations persisted in browser storage
+- DOCX export with headings, lists, tables, code, alerts, and diagrams
+- HTML export
+- PDF export through the browser print dialog
+- Responsive layout for desktop and mobile screens
 
-## How to Use 🚀
+## Quick Start
 
-### Method 1: Drag and Drop
-1. Drag a `.md` or `.txt` file onto the "Upload Markdown File" area
-2. Your content will automatically load into the editor
-3. The preview will update in real-time
-4. Click "Download Word Document" to save as `.docx`
-5. Enter your desired filename in the popup
-6. Confirm to download
+This project uses native ES modules, so serve it over HTTP instead of opening `index.html` directly with `file://`.
 
-### Method 2: Click to Upload
-1. Click on the upload area to browse your files
-2. Select a `.md` or `.txt` file
-3. Your content will load and preview will update
-4. Download or copy as needed
-
-### Method 3: Paste Content
-1. Paste your markdown content directly in the text area
-2. Watch the live preview update in real-time
-3. Use the action buttons to download or copy
-
-## Supported Markdown Syntax 📚
-
-### Headings
-```markdown
-# Heading 1
-## Heading 2
-### Heading 3
-#### Heading 4
+```bash
+cd MDFileViewer
+python3 -m http.server 8765
 ```
 
-### Text Formatting
-- **Bold**: `**bold text**` or `__bold text__`
-- *Italic*: `*italic text*` or `_italic text_`
-- `Inline Code`: `` `code` ``
+Open <http://localhost:8765> in a browser.
 
-### Code Blocks
+No build step or package installation is required. Runtime libraries are loaded from CDNs.
+
+## Usage
+
+### Edit and Preview
+
+Paste Markdown into the editor or upload one or more `.md`, `.markdown`, or `.txt` files. Multiple files are combined with a filename heading and a horizontal-rule separator. The preview updates as you type.
+
+### Folder Browser
+
+Use **Open Folder** to select a local folder. The app recursively lists Markdown files, supports search across loaded files, and polls the active file for changes every two seconds. The File System Access API is required, so this feature is primarily supported by Chromium-based browsers.
+
+### Presentation Mode
+
+Use **Present** to open the document as slides. Separate slides with a line containing only `---`. Navigate with the Previous/Next buttons, `ArrowLeft`, `ArrowRight`, or `Space`; press `Escape` to close.
+
+### Mind Maps
+
+Use **Mind Map** to transform the document structure into an interactive map. Use the toolbar to zoom in, zoom out, fit the map to the viewport, or pan around the canvas.
+
+### Annotations
+
+Select text in the preview and choose **Annotate**. Notes are stored in `localStorage` and appear as highlighted text. Click an annotation to view or remove it.
+
+## Supported Syntax
+
+### GitHub Alerts
+
+```markdown
+> [!WARNING]
+> This action cannot be undone.
+```
+
+### Mermaid
+
 ````markdown
-```javascript
-const greeting = "Hello, World!";
-console.log(greeting);
+```mermaid
+flowchart LR
+    A[Markdown] --> B[Preview]
 ```
 ````
 
-Supports language specification for better formatting.
+### Graphviz
 
-### Tables
+````markdown
+```dot
+digraph G {
+    A -> B;
+    B -> C;
+}
+```
+````
+
+### PlantUML
+
+````markdown
+```plantuml
+@startuml
+Alice -> Bob: Hello
+@enduml
+```
+````
+
+PlantUML preview and DOCX export require network access to the public PlantUML server.
+
+### KaTeX
+
 ```markdown
-| Header 1 | Header 2 | Header 3 |
-|----------|----------|----------|
-| Cell 1   | Cell 2   | Cell 3   |
-| Cell 4   | Cell 5   | Cell 6   |
+Inline math: $E = mc^2$
+
+$$
+\sum_{i=1}^{n} i = \frac{n(n+1)}{2}
+$$
 ```
 
-Tables are converted with:
-- Blue header row
-- Proper cell spacing
-- Border styling for better readability
+## Export
 
-### Block Quotes
-```markdown
-> This is a block quote
-> It can span multiple lines
-> and will be italicized with a left border
-```
+- **DOCX** creates a Word document and validates its generated ZIP/XML package before download.
+- **HTML** downloads a standalone styled HTML document.
+- **PDF** opens a browser print dialog. Choose **Save as PDF** there.
 
-### Lists
-```markdown
-- Unordered list item 1
-- Unordered list item 2
-  - Nested item
+## Project Structure
 
-1. Ordered list item 1
-2. Ordered list item 2
-```
-
-### Horizontal Rules
-```markdown
----
-```
-
-## Action Buttons 🎯
-
-- **📥 Download Word Document** - Creates and downloads a `.docx` file with your content
-  - Opens a popup to choose your filename
-  - Converts all markdown formatting to Word format
-- **📋 Copy to Clipboard** - Copies the markdown text to your clipboard
-- **🗑️ Clear** - Clears all content (with confirmation)
-
-## File Requirements 📋
-
-- Supported formats: `.md`, `.txt`
-- Maximum file size: Limited by browser memory (typically several MB)
-- Encoding: UTF-8
-
-## Technical Details 🔧
-
-### Technologies Used
-- **HTML5** - Semantic markup
-- **Tailwind CSS** - Utility-first CSS framework via CDN (light theme)
-- **JavaScript (ES6+)** - Interactive functionality
-- **marked.js** - Markdown parsing
-- **docx.js** - Word document generation
-- **highlight.js** - Code syntax highlighting
-
-### Browser Compatibility
-- Chrome/Chromium 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-### What Gets Converted
-
-When exporting to Word, the following elements are preserved:
-- ✅ Heading levels (H1-H4) with proper sizing
-- ✅ Bold and italic formatting
-- ✅ Inline code with background color
-- ✅ Code blocks with border and background
-- ✅ Tables with header styling and borders
-- ✅ Block quotes with left border accent
-- ✅ Ordered and unordered lists
-- ✅ Horizontal rules
-- ✅ Paragraph spacing and line breaks
-
-## Installation 💻
-
-### Option 1: Direct Usage
-Simply open `index.html` in your web browser. No installation required!
-
-```bash
-# If you want to serve it locally with Python:
-python -m http.server 8000
-# Then open http://localhost:8000
-```
-
-### Option 2: With Node.js HTTP Server
-```bash
-# Install http-server globally
-npm install -g http-server
-
-# Run from the project directory
-http-server
-
-# Open http://localhost:8080
-```
-
-## File Structure 📁
-
-```
+```text
 MDFileViewer/
-├── index.html          # Main HTML file with UI structure (light theme)
-├── script.js           # JavaScript functionality with table & quote support
-└── README.md          # This file
+├── index.html
+├── README.md
+└── src/
+    ├── app.js
+    ├── annotations/
+    │   └── store.js
+    ├── diagrams/
+    │   ├── graphviz.js
+    │   ├── plantuml.js
+    │   └── svg-to-image.js
+    ├── docx/
+    │   ├── alerts.js
+    │   ├── code.js
+    │   ├── converter.js
+    │   ├── lists.js
+    │   └── tables.js
+    ├── export/
+    │   ├── document-template.js
+    │   ├── html-export.js
+    │   └── pdf-export.js
+    ├── file/
+    │   └── file-handler.js
+    ├── folder/
+    │   └── browser.js
+    ├── markdown/
+    │   ├── alerts.js
+    │   ├── math.js
+    │   ├── parser.js
+    │   ├── renderer.js
+    │   └── toc.js
+    ├── mermaid/
+    │   └── renderer.js
+    ├── mindmap/
+    │   └── renderer.js
+    ├── presentation/
+    │   └── slides.js
+    └── ui/
+        ├── annotations.js
+        ├── direction.js
+        ├── folder-panel.js
+        ├── mindmap.js
+        ├── modal.js
+        ├── notifications.js
+        ├── presentation.js
+        ├── preview.js
+        ├── search.js
+        ├── theme.js
+        └── toc.js
 ```
 
-## Features in Detail 🎨
+## Runtime Versions
 
-### Live Preview
-- Real-time rendering of your markdown
-- Syntax highlighting for code blocks
-- Styled output matching professional documents
-- Light theme for comfortable viewing
+The application currently loads these browser libraries from CDN:
 
-### Word Document Export
-- Converts markdown formatting to Word formatting
-- Preserves heading levels (H1, H2, H3, H4)
-- Maintains text formatting (bold, italic, inline code)
-- Converts tables with proper borders and styling
-- Formats block quotes with left border
-- Generates proper Word document structure
-- **New**: Filename customization before download
+| Library | Version | Purpose |
+| --- | --- | --- |
+| docx | 8.5.0 | DOCX generation |
+| JSZip | 3.10.1 | DOCX package validation |
+| Mermaid | 10.x | Mermaid diagrams |
+| marked | CDN latest | Markdown/GFM parsing |
+| highlight.js | 11.8.0 | Code syntax highlighting |
+| `@viz-js/viz` | 3.11.0 | Graphviz rendering |
+| pako | 2.1.0 | PlantUML compression |
+| D3 | 7.x | Mind map dependency |
+| markmap-lib | 0.18.12 | Mind map transformation |
+| markmap-view | 0.18.12 | Mind map rendering |
+| markmap-toolbar | 0.18.12 | Mind map zoom/pan controls |
+| KaTeX | 0.16.11 | Math rendering |
+| Tailwind CSS | CDN latest | UI utilities |
 
-### Table Conversion
-- Markdown tables are parsed and converted accurately
-- Header rows have blue background color
-- All cells properly spaced and bordered
-- Column widths auto-calculated
+## Browser Requirements
 
-### Code Block Formatting
-- Separate code blocks with bordered boxes
-- Background color for visibility
-- Language-specific syntax highlighting support
-- Inline code highlighted with background color
+- Modern Chrome, Edge, Firefox, or Safari for the editor, preview, exports, and diagrams
+- Chromium-based browser for **Open Folder** because it uses `showDirectoryPicker()`
+- Network access for CDN libraries and PlantUML rendering
+- Browser print support for PDF export
 
-### Copy to Clipboard
-- One-click copy functionality
-- Browser notification feedback
-- Supports all text content
+## Privacy
 
-## Tips & Tricks 💡
+Markdown files and generated DOCX/HTML content are processed in the browser. Folder access is granted only after the browser folder picker is used. PlantUML definitions are sent to the configured public PlantUML server when PlantUML rendering is requested.
 
-1. **Multiple Headings**: Use different heading levels to organize your content
-2. **Code Blocks**: Wrap code with triple backticks for better formatting
-   ```javascript
-   // Specify language for syntax highlighting
-   const example = "code";
-   ```
-3. **Tables**: Use pipe characters `|` to create properly formatted tables
-4. **Quotes**: Use `>` to create block quotes that span multiple lines
-5. **Quick Copy**: Use the copy button to share content via messaging apps
-6. **File Size**: For best performance, keep files under 1MB
-7. **Backup**: Always keep backups of important documents
-8. **Filename**: The popup lets you rename your document before saving
+## Troubleshooting
 
-## Troubleshooting 🔧
+- If the page is blank, serve the project over HTTP and check the browser console for failed CDN requests.
+- If a diagram does not render, verify its fence language and network access.
+- If PDF export appears to do nothing in automation, remember that it intentionally opens the native print dialog.
+- If folder browsing is unavailable, use a Chromium-based browser or upload files directly.
+- If the preview appears stale, reload the page and confirm that the CDN resources are reachable.
 
-### Word document won't download
-- Check browser download settings
-- Ensure JavaScript is enabled
-- Try a different browser
-- Check console for error messages (F12)
-
-### Preview not updating
-- Check for console errors (F12)
-- Ensure markdown syntax is correct
-- Try refreshing the page
-- Clear browser cache
-
-### File upload not working
-- Ensure file is `.md` or `.txt` format
-- Check file permissions
-- Try drag-and-drop if click upload fails
-- Check file encoding (UTF-8 recommended)
-
-### Tables not converting properly
-- Ensure table format uses pipes `|` as separators
-- Check that separator row uses `---` (at least 3 hyphens)
-- Verify all rows have same number of cells as header
-- Add spaces around cell content
-
-### Filename popup not appearing
-- Ensure JavaScript is enabled
-- Clear browser cache and reload
-- Try with a smaller markdown content
-- Check console for errors (F12)
-
-## Browser Console Errors? 🐛
-
-If you encounter any issues:
-1. Press `F12` to open Developer Tools
-2. Check the Console tab for error messages
-3. Verify internet connection (CDN resources need it)
-4. Clear browser cache and reload
-
-## Performance Notes ⚡
-
-- All processing happens in your browser (no server needed)
-- Files are not uploaded anywhere - everything stays local
-- Conversion speed depends on file size and your device
-- CDN resources are cached by your browser for faster loads
-- Light theme uses optimized colors for fast rendering
-
-## Future Enhancements 🚀
-
-Potential features for future versions:
-- PDF export option
-- Dark mode toggle
-- Multiple theme options
-- Syntax highlighting customization
-- Document styling options (fonts, colors, margins)
-- Batch file processing
-- Import from cloud storage
-- Real-time collaboration
-
-## Light Theme Design 🌅
-
-The converter features a beautiful light theme with:
-- Soft gradient backgrounds (blue to purple tones)
-- White content areas with subtle borders
-- High contrast text for readability
-- Color-coded buttons for different actions
-- Smooth hover animations and transitions
-- Responsive padding and spacing
-
-## License 📄
+## License
 
 This project is open source and free to use for personal and commercial purposes.
-
-## Support 💬
-
-For issues or suggestions, feel free to create an issue or contribute to the project.
-
-## Changelog 📝
-
-### Version 2.0 (Current)
-- ✨ Added table support with proper formatting
-- ✨ Added block quote support with styling
-- ✨ Improved code block formatting with borders
-- ✨ Added H4 heading support
-- ✨ Filename popup dialog for downloads
-- 🎨 Changed UI to light theme
-- ✨ Better inline code formatting
-- ✨ Support for ordered and unordered lists
-- ✨ Horizontal rule support
-- 🐛 Improved markdown parsing accuracy
-
-### Version 1.0
-- Initial release with basic markdown to Word conversion
-- Copy to clipboard functionality
-- File upload and drag-and-drop
-- Live preview
-
----
-
-**Enjoy converting your markdown documents!** ✨

@@ -16,6 +16,8 @@
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.iife.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/markmap-toolbar@0.18.12/dist/style.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/markmap-toolbar@0.18.12/dist/index.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
@@ -514,6 +516,19 @@
         #presentationSlide pre { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; overflow-x: auto; }
         html.dark #presentationSlide { color: #e2e8f0; }
         html.dark #presentationSlide code, html.dark #presentationSlide pre { background-color: #1e293b; color: #e2e8f0; border-color: #334155; }
+
+        .presentation-content {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 2.5rem clamp(1.5rem, 5vw, 4rem);
+        }
+
+        #presentationSlide {
+            margin: 0 auto;
+            padding-top: 0.5rem;
+            padding-bottom: 2rem;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 min-h-screen text-gray-800 dark:text-slate-200">
@@ -784,7 +799,7 @@
             <span id="presentationCounter" class="text-sm font-semibold text-gray-500 dark:text-slate-400">1 / 1</span>
             <button id="presentationCloseBtn" type="button" class="text-sm font-semibold text-gray-600 dark:text-slate-300 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-slate-800">Close &#10005;</button>
         </div>
-        <div class="flex-1 overflow-y-auto p-10 flex items-center justify-center">
+        <div class="presentation-content">
             <div id="presentationSlide" class="max-w-4xl w-full text-lg"></div>
         </div>
         <div class="flex items-center justify-center gap-4 py-4 border-t border-gray-200 dark:border-slate-700">
@@ -799,7 +814,10 @@
             <h3 class="font-bold text-gray-800 dark:text-slate-100">Mind Map</h3>
             <button id="mindmapCloseBtn" type="button" class="text-sm font-semibold text-gray-600 dark:text-slate-300 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-slate-800">Close &#10005;</button>
         </div>
-        <svg id="mindmapSvg" class="flex-1 w-full h-full"></svg>
+        <div class="relative flex-1 min-h-0">
+            <svg id="mindmapSvg" class="block w-full h-full"></svg>
+            <div id="mindmapToolbar" class="absolute bottom-6 right-6"></div>
+        </div>
     </div>
 
     <script type="module" src="src/app.js"></script>

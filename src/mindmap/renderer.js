@@ -8,9 +8,9 @@ function getTransformer() {
     return transformer;
 }
 
-// Render markdown headings/lists as an interactive mind map inside svgEl
+// Render markdown headings/lists as an interactive mind map inside svgEl; returns the Markmap instance
 export function renderMindmap(markdown, svgEl) {
     const { root } = getTransformer().transform(markdown);
     svgEl.innerHTML = '';
-    markmap.Markmap.create(svgEl, undefined, root);
+    return markmap.Markmap.create(svgEl, { autoFit: true }, root);
 }
