@@ -2,6 +2,9 @@
 
 A browser-based Markdown workspace with live preview, diagrams, math, document export, folder browsing, presentation mode, and Word conversion. Files are processed locally in the browser unless a feature explicitly uses a remote renderer such as PlantUML.
 
+**Live demo:** https://ajay9572.github.io/MDFileViewer/<br>
+**Repository:** https://github.com/Ajay9572/MDFileViewer
+
 ## Features
 
 - GitHub-flavored Markdown through `marked.js`, including tables, fenced code, block quotes, headings, lists, and horizontal rules
@@ -27,7 +30,7 @@ A browser-based Markdown workspace with live preview, diagrams, math, document e
 
 ## Quick Start
 
-This project uses native ES modules, so serve it over HTTP instead of opening `index.html` directly with `file://`.
+The application is deployed on GitHub Pages and can be used directly from the live demo. For local development, serve it over HTTP because native ES modules do not work reliably when `index.html` is opened directly with `file://`.
 
 ```bash
 cd MDFileViewer
